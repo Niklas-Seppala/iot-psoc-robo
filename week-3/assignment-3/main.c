@@ -47,10 +47,10 @@ int tank_turn(u_int8_t direction, u_int16_t speed, u_int16_t duration)
 */
 u_int8_t xorshift(u_int32_t *prev)
 {
-	uint32_t x = *prev;
-	x ^= x << 14;
-	x ^= x >> 19;
-	x ^= x << 6;
+    uint32_t x = *prev;
+    x ^= x << 14;
+    x ^= x >> 19;
+    x ^= x << 6;
     *prev = x;
     return x & 1;
 }
