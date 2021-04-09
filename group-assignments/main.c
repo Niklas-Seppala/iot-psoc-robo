@@ -18,16 +18,71 @@
 #include <stdlib.h>
 #include <unistd.h>
 
+void print_refl_sensor(struct sensors_ *s) 
+{
+    printf("%d%12d%12d%13d%15d%15d\n",
+        s->L3, s->L2, s->L1,
+        s->R1, s->R2, s->R3);     
+}
+
 #define FOREVER 1
+#define BTN_PRESSED 0
+#define BTN_RELEASED 1
+void wait_SW1() 
+{
+    while(FOREVER) {
+        if (SW1_Read() == BTN_PRESSED)
+        {
+            while (SW1_Read() != BTN_RELEASED);
+            break;
+        }
+        vTaskDelay(50);
+    }
+}
+
+#define RIGHT 1
+#define LEFT 2
+#define FORWARD 0
+#define BACKWARD 1
+void tank_turn(int direction, int speed, int duration)
+{
+    if (direction == RIGHT)
+    {
+        SetMotors(FORWARD, BACKWARD, speed, speed, duration);
+    }
+    else if (direction == LEFT)
+    {
+        SetMotors(BACKWARD, FORWARD, speed, speed, duration);
+    }
+}
+void smart_tank_turn(int dir, int speed, struct sensors_ * sensors)
+{
+    while (sensors->L1 || sensors->R1) 
+    {
+        tank_turn(dir, speed, 0);   
+        reflectance_digital(sensors);
+    }
+    while (!sensors->L1 || !sensors->R1) 
+    {
+        tank_turn(dir, speed, 0);   
+        reflectance_digital(sensors);
+    }
+    tank_turn(dir, speed, 24);
+}
+
+
+#define ASSIGNMENT_3_1 0
+#define ASSIGNMENT_3_2 0
+#define ASSIGNMENT_3_3 0
+#define ASSIGNMENT_4_1 0
+#define ASSIGNMENT_4_2 0
+#define ASSIGNMENT_4_3 0
+
 
 /************************************************************************/
 //                                  WEEK 3
 /************************************************************************/
 
-#define ASSIGNMENT_3_1 0
-#define ASSIGNMENT_3_2 0
-#define ASSIGNMENT_3_3 0
-#define ASSIGNMENT_4_1 1
 
 #if ASSIGNMENT_3_1
 void zmain(void)
@@ -146,6 +201,202 @@ void zmain(void)
 
 /************************************************************************/
 //                                  WEEK 4
+/************************************************************************/
+
+#if ASSIGNMENT_4_1 || ASSIGNMENT_4_2 || ASSIGNMENT_4_3
+
+#define SPEED 50
+void start() 
+{
+    printf("\n\n\nBOOT\n\n\n");
+    motor_start();
+    motor_forward(0, 0);
+
+    IR_Start();
+    IR_flush();
+}
+
+int on_line(struct sensors_* refl) 
+{
+    return refl->L3 == 1 && refl->R3 == 1;
+}
+    
+#endif
+
+#if ASSIGNMENT_4_1
+
+#define LINE_GOAL 5
+
+void zmain(void)
+{
+    // Setup
+    int line_count = 0;
+    struct sensors_ sensors;
+    reflectance_start();
+    reflectance_set_threshold(9000, 9000, 11000, 11000, 9000, 9000);
+    start();
+    
+    // Drive to first line.
+    wait_SW1();
+    reflectance_digital(&sensors);
+    while (!on_line(&sensors)) 
+    {
+        motor_forward(SPEED, 0);
+        reflectance_digital(&sensors);
+    }
+    motor_forward(0, 0);
+    
+    // Drive to end after remote signal.
+    IR_wait();
+    int current_line_state;
+    // Calibrate goal line count based on start position.
+    int prev_line_state = on_line(&sensors);
+    int line_count_goal = prev_line_state ? LINE_GOAL-1 : LINE_GOAL;
+    while(line_count < line_count_goal)
+    {
+        current_line_state = on_line(&sensors);
+        // Increment counter if bot drives to line.
+        if (current_line_state && !prev_line_state)
+                line_count++;
+        
+        // Store current line state.
+        prev_line_state = current_line_state;
+        
+        motor_forward(SPEED, 0);
+        reflectance_digital(&sensors);
+    }
+    
+    // End
+    motor_forward(0, 0);
+    motor_stop();
+    while (FOREVER) {};
+}   
+
+#endif
+
+#if ASSIGNMENT_4_2
+
+#define TURN_SPEED 100
+    
+void zmain(void)
+{
+    // Setup
+    struct sensors_ sensors;
+    reflectance_start();
+    reflectance_set_threshold(9000, 11000, 11000, 11000, 11000, 9000);
+    start();
+    
+    // Drive to first line.
+    wait_SW1();
+    reflectance_digital(&sensors);
+    while (!on_line(&sensors)) 
+    {
+        motor_forward(SPEED, 0);
+        reflectance_digital(&sensors);
+    }
+    motor_forward(0, 0);
+    
+    // Cross the first line.
+    IR_wait();
+    while (on_line(&sensors))
+    {
+        motor_forward(SPEED, 0);
+        reflectance_digital(&sensors);
+    }
+    motor_forward(0, 0);
+    
+    // Drive to the end of the track.
+    while (!on_line(&sensors))
+    {
+        if (sensors.R2)
+        {
+            SetMotors(0, 1, SPEED, SPEED, 0); // TURN RIGHT
+        }
+        else if (sensors.L2)
+        {
+            SetMotors(1, 0, SPEED, SPEED, 0); // TURN LEFT
+        }
+        else
+        {
+            motor_forward(SPEED, 0);
+        }
+        
+        reflectance_digital(&sensors);
+    }
+    
+    // End
+    motor_forward(0, 0);
+    motor_stop();
+    while (FOREVER) {}
+}
+
+#endif
+
+#if ASSIGNMENT_4_3
+    
+#define PRE_TURN_OFFSET 250
+
+void zmain(void)
+{
+    // Setup
+    int route[] = { LEFT, RIGHT, RIGHT };
+    const int ROUTE_LEN = 3;
+    struct sensors_ sensors;
+    reflectance_start();
+    reflectance_set_threshold(9000, 9000, 11000, 11000, 9000, 9000);
+    start();
+    
+    // Drive to first line.
+    wait_SW1();
+    reflectance_digital(&sensors);
+    while (!on_line(&sensors)) 
+    {
+        motor_forward(SPEED, 0);
+        reflectance_digital(&sensors);
+    }
+    motor_forward(0, 0);
+    
+    // Cross the first line.
+    IR_wait();
+    while (on_line(&sensors))
+    {
+        motor_forward(SPEED, 0);
+        reflectance_digital(&sensors);
+    }
+    motor_forward(0, 0);
+    
+    // Drive to the end of the track
+    int current_line_state;
+    int prev_line_state = on_line(&sensors);
+    int turn = 0;
+    while (FOREVER)
+    {
+        current_line_state = on_line(&sensors);
+        if (!current_line_state && prev_line_state)
+        {
+            motor_forward(SPEED, PRE_TURN_OFFSET);
+            smart_tank_turn(route[turn++], SPEED, &sensors);
+        }
+        // Check if robot is at the finish line
+        else if (current_line_state && turn == ROUTE_LEN)
+        {
+            break; 
+        }
+        motor_forward(SPEED, 0);
+        reflectance_digital(&sensors);
+        prev_line_state = current_line_state;
+    }
+    
+    // End
+    motor_forward(0, 0);
+    motor_stop();
+    while (FOREVER) {};
+}
+    
+#endif
+
+/************************************************************************/
+//                                  WEEK 5
 /************************************************************************/
 
 
