@@ -399,13 +399,6 @@ void zmain(void)
 //                                  WEEK 5
 /************************************************************************/
 
-<<<<<<< Updated upstream
-
-
-
-#if 0
-// Name and age
-=======
 #define ASSIGNMENT_5_1 0
 #define ASSIGNMENT_5_2 1
 #define ASSIGNMENT_5_3 0
@@ -414,7 +407,6 @@ void zmain(void)
 
 #define TOPIC "Zumo02/button"
 
->>>>>>> Stashed changes
 void zmain(void)
 {
     init(NULL, 0);
@@ -500,10 +492,4 @@ void zmain(void)
         motor_forward(0,0);
     }
 }
-    
 #endif
-<<<<<<< Updated upstream
-
-/* [] END OF FILE */
-=======
->>>>>>> Stashed changes
