@@ -79,6 +79,8 @@ void smart_tank_turn(int dir, int speed,
  */
 int on_line(struct sensors_ *refl_sensors);
 
+int not_on_line(struct sensors_ *refl_sensors);
+
 /***************************************/
 /*               UTILITY               */
 /***************************************/

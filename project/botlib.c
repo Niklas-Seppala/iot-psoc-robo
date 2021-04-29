@@ -125,6 +125,11 @@ int on_line(struct sensors_ *refl_sensors)
     return s->L3 && s->R3;
 }
 
+int not_on_line(struct sensors_ *refl_sensors) 
+{
+    return !on_line(refl_sensors);
+}
+
 
 int rand_range(int min, int max)
 {
