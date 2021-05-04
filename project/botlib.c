@@ -20,7 +20,6 @@ int io_SW1_pressed(void)
         while (SW1_Read() != BTN_RELEASED);
         return 1;
     }
-    
     return 0;
 }
 

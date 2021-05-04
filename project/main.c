@@ -1,5 +1,4 @@
 #include "botlib.h"
-#include "gridai.h"
 
 #define PROJECT_1 0
 #define PROJECT_2 0
@@ -162,7 +161,7 @@ void send_nav_state(struct sensors_ *sensors, int *flag)
 
 #endif    
 #if PROJECT_3
-    
+#include "gridai.h"
 #define SPEED 100
 #define ULTRA_TRESHOLD 12
 
@@ -191,14 +190,14 @@ void startup(struct navigator *nav, struct grid_map *map)
     
     map->x_min = -3;
     map->x_max = 3;
-    map->y_max = 12;
+    map->y_max = 13;
     
     nav->speed = SPEED;
+    nav->ultra_treshold = ULTRA_TRESHOLD;
     nav->x = 0;
-    nav->y = -2;
+    nav->y = -1;
     nav->direction = UP;
     nav->edge_flag = EDGE_NONE;
-    nav->ultra_treshold = ULTRA_TRESHOLD;
     nav->sensors = init(&reflection_confs, flags);
     nav->map = map;
 }
@@ -217,18 +216,25 @@ void drive_to_start(struct navigator *nav)
 
 void wait(void)
 {
-    print_mqtt("zumo02/ready", " %s", "zumo");
+    print_mqtt("zumo02/ready", " %s", "maze");
     IR_wait();
 }
 
 void navigate_grid(struct navigator *nav)
 {
+    uint32_t start_ticks = xTaskGetTickCount();
+    print_mqtt("zumo02/start", " %lu", start_ticks);
+    
     while (AI_grid_behaviour(nav))
     {
         AI_grid_next(nav);
         AI_grid_update_pos(nav);
+        print_mqtt("zumo02/position", " (%d, %d)", nav->x, nav->y);
     }
+    
     AI_grid_finish(nav);
+    print_mqtt("zumo02/stop", " %lu", xTaskGetTickCount());
+    print_mqtt("zumo02/time", " %lu", xTaskGetTickCount() - start_ticks);
 }
 
 #endif
