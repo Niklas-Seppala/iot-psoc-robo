@@ -27,6 +27,12 @@
  */
 void io_wait_SW1(void);
 
+/**
+ * @brief Checks if the SW1 button was pressed
+ *        (At that moment).
+ * 
+ * @return int boolean val
+ */
 int io_SW1_pressed(void);
 
 /**
@@ -70,7 +76,6 @@ void smart_tank_turn(int dir, int speed, struct sensors_ *sensors);
 /*             NAVIGATION              */
 /***************************************/
 
-
 struct grid_map
 {
     int x_min;
@@ -78,6 +83,10 @@ struct grid_map
     int y_max;
 };
 
+/**
+ * @brief Navigator object, holds values
+ *        related to navigation.
+ */
 struct navigator 
 {
     int speed;
@@ -99,14 +108,40 @@ struct navigator
  */
 int on_line(struct sensors_ *refl_sensors);
 
+/**
+ * @brief negated version of "on_line"-function
+ *        for function pointer usage.
+ * 
+ * @param sensors reflectance sensors
+ * @return int boolean val
+ */
 int not_on_line(struct sensors_ *refl_sensors);
 
+/**
+ * @brief Checks if atleast other side of
+ *        the robot's reflectance sensors
+ *        are on a line.
+ * 
+ * @param sensors reflectance sensors
+ * @return int boolean val
+ */
 int partially_on_line(struct sensors_ *sensors);
 
+/**
+ * @brief Left -> Right,
+ *        Right -> Left
+ * 
+ * @param dir direction
+ * @return int negated direction
+ */
 int negate_dir(int dir);
 
-void update_pos(struct navigator *nav);
-
+/**
+ * @brief Follows the black line.
+ * 
+ * @param sensors reflectance sensors
+ * @param speed desired speed
+ */
 void follow_line(struct sensors_ *sensors, int speed);
 
 /***************************************/
@@ -140,6 +175,12 @@ typedef struct refl_configuration {
  */
 void *init(refl_conf_t *refl_confs, int flags);
 
+/**
+ * @brief Shut down the robot and release used
+ *        resources.
+ * 
+ * @param h_allocated heap allocated
+ */
 void shutdown(void *h_allocated);
 
 /**

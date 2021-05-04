@@ -226,7 +226,7 @@ void navigate_grid(struct navigator *nav)
     while (AI_grid_behaviour(nav))
     {
         AI_grid_next(nav);
-        update_pos(nav);
+        AI_grid_update_pos(nav);
     }
     AI_grid_finish(nav);
 }

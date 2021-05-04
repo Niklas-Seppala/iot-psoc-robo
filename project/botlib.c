@@ -153,14 +153,6 @@ void follow_line(struct sensors_ *sensors, int speed)
     reflectance_digital(sensors);
 }
 
-void update_pos(struct navigator *nav)
-{
-    if (!(nav->direction))
-        nav->y++;
-    else
-        nav->x += nav->direction == LEFT ? -1 : 1;
-}
-
 int rand_range(int min, int max)
 {
     return (rand() % (max - min + 1)) + min;

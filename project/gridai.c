@@ -1,24 +1,36 @@
 #include "botlib.h"
 #include "gridai.h"
 
+static void face_north(struct navigator *nav);
+static void scan_xroads(struct navigator *nav);
+static void scan_xroads(struct navigator *nav);
+static int on_edge(struct navigator *nav);
+static int side_bias_dir(struct navigator *nav);
+static int finish_line(struct navigator *nav);
+
+
+/***********************************************/
+/*                  PUBLIC API                 */
+/***********************************************/
+
 int AI_grid_behaviour(struct navigator *nav)
 {
-    AI_grid_scan_xroads(nav);
+    scan_xroads(nav);
     motor_forward(nav->speed, 200);
     
     // Stash the previous horizontal direction. 
     // If there was none, make one up.
     int horizontal_dir = nav->direction ? nav->direction : rand_range(RIGHT, LEFT);
-    int side_bias_dir = grid_side_bias_dir(nav);
+    int sbias_dir = side_bias_dir(nav);
     
-    AI_grid_face_north(nav);
+    face_north(nav);
     reflectance_digital(nav->sensors);
     if (!nav->sensors->R1 && !nav->sensors->L1)
     {
         // Robot is facing off the grid. Its at the top of
         // the map.
         // Turn to the middle of the map.
-        nav->direction = side_bias_dir;
+        nav->direction = sbias_dir;
         smart_tank_turn(nav->direction, nav->speed, nav->sensors);
         return 1;
     }
@@ -26,12 +38,12 @@ int AI_grid_behaviour(struct navigator *nav)
     if (Ultra_GetDistance() < nav->ultra_treshold)
     {
         // Obstacle detected on the north side.
-        if (grid_on_edge(nav))
+        if (on_edge(nav))
         {
             // Handle possible edge of the map scenario.
             // Turn to the opposite side of the map is only
             // possible option
-            nav->direction = side_bias_dir;
+            nav->direction = sbias_dir;
             smart_tank_turn(nav->direction, nav->speed, nav->sensors);
             return 1;
         }
@@ -48,15 +60,12 @@ int AI_grid_behaviour(struct navigator *nav)
             smart_tank_turn(nav->direction, nav->speed, nav->sensors);
         }
     }
-    return !grid_finish_line(nav);
+    return !finish_line(nav);
 }
 
 void AI_grid_next(struct navigator *nav)
 {
-    while (partially_on_line(nav->sensors))
-    {
-        follow_line(nav->sensors, nav->speed);
-    }
+    // Drive until R3 or L3 sensors detect a line (crossroads).
     while (!partially_on_line(nav->sensors))
     {
         follow_line(nav->sensors, nav->speed);
@@ -65,6 +74,7 @@ void AI_grid_next(struct navigator *nav)
 
 void AI_grid_finish(struct navigator *nav)
 {
+    // Drive until R1 and R2 both lose the line.
     while (nav->sensors->L1 || nav->sensors->R1) 
     {
         motor_forward(nav->speed, 0);
@@ -72,7 +82,24 @@ void AI_grid_finish(struct navigator *nav)
     }
 }
 
-void AI_grid_face_north(struct navigator *nav)
+void AI_grid_update_pos(struct navigator *nav)
+{
+    if (nav->direction == UP) 
+    {
+        nav->y++;
+    }
+    else 
+    {
+        nav->x += nav->direction == LEFT ? -1 : 1;
+    }
+}
+
+
+/**********************************************/
+/*                  INTERNALS                 */
+/**********************************************/
+
+static void face_north(struct navigator *nav)
 {
     if (nav->direction == RIGHT)
     {
@@ -85,7 +112,7 @@ void AI_grid_face_north(struct navigator *nav)
     nav->direction = UP;
 }
 
-void AI_grid_scan_xroads(struct navigator *nav)
+static void scan_xroads(struct navigator *nav)
 {
     motor_forward(nav->speed, 25);
     reflectance_digital(nav->sensors);
@@ -103,12 +130,12 @@ void AI_grid_scan_xroads(struct navigator *nav)
     }
 }
 
-int grid_finish_line(struct navigator *nav)
+static int finish_line(struct navigator *nav)
 {
     return nav->y == nav->map->y_max && nav->x == 0;
 }
 
-int grid_on_edge(struct navigator *nav)
+static int on_edge(struct navigator *nav)
 {
     if (nav->x < 0)
     {
@@ -121,12 +148,18 @@ int grid_on_edge(struct navigator *nav)
     return 0;
 }
 
-int grid_side_bias_dir(struct navigator *nav)
+static int side_bias_dir(struct navigator *nav)
 {
     if (nav->x < 0)
+    {
         return RIGHT;
+    }
     else if (nav->x > 0)
+    {
         return LEFT;
+    }
     else 
+    {
         return UP;
+    }
 }
