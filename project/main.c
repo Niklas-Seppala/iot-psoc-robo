@@ -1,8 +1,9 @@
 #include "botlib.h"
+#include "gridai.h"
 
 #define PROJECT_1 0
-#define PROJECT_2 1
-#define PROJECT_3 0
+#define PROJECT_2 0
+#define PROJECT_3 1
 
 #if PROJECT_1
 
@@ -92,7 +93,7 @@ void send_nav_state(struct sensors_ *sensors, int *flag);
 
 void zmain(void) 
 {
-    refl_conf_t confs = { 9000, 11000, 11000, 11000, 11000, 9000 };
+    refl_conf_t confs = { 9000, 9000, 11000, 11000, 9000, 9000 };
     int init_flags = INIT_MOTOR | INIT_IR;
     struct sensors_ *sensors = init(&confs, init_flags);
     
@@ -147,7 +148,7 @@ void zmain(void)
 
 void send_nav_state(struct sensors_ *sensors, int *flag)
 {
-    if (!sensors->L1 && !sensors->R1)
+    if (!*flag && !sensors->L1 && !sensors->R1)
     {
         *flag = 1;
         print_mqtt("zumo02/miss", " %lu", xTaskGetTickCount());
@@ -161,10 +162,73 @@ void send_nav_state(struct sensors_ *sensors, int *flag)
 
 #endif    
 #if PROJECT_3
+    
+#define SPEED 100
+#define ULTRA_TRESHOLD 12
+
+void startup(struct navigator *nav, struct grid_map *map);
+void wait(void);
+void drive_to_start(struct navigator *nav);
+void navigate_grid(struct navigator *nav);
 
 void zmain(void) 
 {
+    struct grid_map map;
+    struct navigator nav;
+    startup(&nav, &map);
     
+    drive_to_start(&nav);
+    wait();
+    navigate_grid(&nav);
+    
+    shutdown(nav.sensors);
+}
+
+void startup(struct navigator *nav, struct grid_map *map)
+{
+    refl_conf_t reflection_confs = { 9000, 9000, 11000, 11000, 9000, 9000 };
+    int flags = INIT_MOTOR | INIT_ULTRA | INIT_IR | INIT_RAND;
+    
+    map->x_min = -3;
+    map->x_max = 3;
+    map->y_max = 12;
+    
+    nav->speed = SPEED;
+    nav->x = 0;
+    nav->y = -2;
+    nav->direction = UP;
+    nav->edge_flag = EDGE_NONE;
+    nav->ultra_treshold = ULTRA_TRESHOLD;
+    nav->sensors = init(&reflection_confs, flags);
+    nav->map = map;
+}
+
+void drive_to_start(struct navigator *nav)
+{
+    io_wait_SW1();
+    reflectance_digital(nav->sensors);
+    while (not_on_line(nav->sensors))
+    {
+        motor_forward(SPEED, 0);
+        reflectance_digital(nav->sensors);
+    }
+    motor_forward(0, 0);
+}
+
+void wait(void)
+{
+    print_mqtt("zumo02/ready", " %s", "zumo");
+    IR_wait();
+}
+
+void navigate_grid(struct navigator *nav)
+{
+    while (AI_grid_behaviour(nav))
+    {
+        AI_grid_next(nav);
+        update_pos(nav);
+    }
+    AI_grid_finish(nav);
 }
 
 #endif

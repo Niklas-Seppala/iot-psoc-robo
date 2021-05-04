@@ -9,6 +9,9 @@
 #include "LSM303D.h"
 #include "IR.h"
 #include "mqtt_sender.h"
+    
+#ifndef BOTLIB_H
+#define BOTLIB_H
 
 #define FOREVER 1
 
@@ -24,7 +27,6 @@
  */
 void io_wait_SW1(void);
 
-
 int io_SW1_pressed(void);
 
 /**
@@ -34,11 +36,10 @@ int io_SW1_pressed(void);
  */
 void io_print_refl(struct sensors_ *s);
 
-
 /***************************************/
 /*              MOVEMENT               */
 /***************************************/
-
+#define UP 0
 #define RIGHT 1
 #define LEFT 2
 #define FORWARD 0
@@ -62,13 +63,32 @@ void tank_turn(int direction, int speed, int duration);
  * @param speed motor speed
  * @param sensors reflectance sensors
  */
-void smart_tank_turn(int dir, int speed,
-                     struct sensors_ *sensors);
+void smart_tank_turn(int dir, int speed, struct sensors_ *sensors);
 
 
 /***************************************/
 /*             NAVIGATION              */
 /***************************************/
+
+
+struct grid_map
+{
+    int x_min;
+    int x_max;
+    int y_max;
+};
+
+struct navigator 
+{
+    int speed;
+    int x;
+    int y;
+    int edge_flag;
+    int direction;
+    int ultra_treshold;
+    struct sensors_ *sensors;
+    struct grid_map *map;
+};
 
 /**
  * @brief Checks if the outermost sensors are
@@ -80,6 +100,14 @@ void smart_tank_turn(int dir, int speed,
 int on_line(struct sensors_ *refl_sensors);
 
 int not_on_line(struct sensors_ *refl_sensors);
+
+int partially_on_line(struct sensors_ *sensors);
+
+int negate_dir(int dir);
+
+void update_pos(struct navigator *nav);
+
+void follow_line(struct sensors_ *sensors, int speed);
 
 /***************************************/
 /*               UTILITY               */
@@ -112,7 +140,7 @@ typedef struct refl_configuration {
  */
 void *init(refl_conf_t *refl_confs, int flags);
 
-void shutdown(void **h_allocated);
+void shutdown(void *h_allocated);
 
 /**
  * @brief Gets a random integer inside set range.
@@ -122,3 +150,5 @@ void shutdown(void **h_allocated);
  * @return int random integer
  */
 int rand_range(int min, int max);
+
+#endif // !BOTLIB_H

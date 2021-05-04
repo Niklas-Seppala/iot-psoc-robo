@@ -55,7 +55,6 @@ void smart_tank_turn(int dir, int speed, struct sensors_ * sensors)
         tank_turn(dir, speed, 0);   
         reflectance_digital(sensors);
     }
-    tank_turn(dir, speed, 24);
 }
 
 static int init_flags = -1;
@@ -80,7 +79,6 @@ void *init(refl_conf_t *refl_confs, int flags)
         Ultra_Start();
         vTaskDelay(30); // fix 0 read at the start
     }
-    
     if (flags & INIT_IR)
     {
         IR_Start();
@@ -100,14 +98,13 @@ void *init(refl_conf_t *refl_confs, int flags)
     return r_val;
 }
 
-void shutdown(void **h_allocated)
+void shutdown(void *h_allocated)
 {
     if (init_flags > 0) 
     {
-        if (*h_allocated) 
+        if (h_allocated) 
         {
-            free(*h_allocated);
-            *h_allocated = NULL;
+            free(h_allocated);
         }    
         
         if (init_flags & INIT_MOTOR)
@@ -121,8 +118,7 @@ void shutdown(void **h_allocated)
 
 int on_line(struct sensors_ *refl_sensors) 
 {
-    struct sensors_ *s = (struct sensors_*) refl_sensors;
-    return s->L3 && s->R3;
+    return refl_sensors->L3 && refl_sensors->R3;
 }
 
 int not_on_line(struct sensors_ *refl_sensors) 
@@ -130,6 +126,40 @@ int not_on_line(struct sensors_ *refl_sensors)
     return !on_line(refl_sensors);
 }
 
+int negate_dir(int dir)
+{
+    return dir == LEFT ? RIGHT : LEFT;
+}
+
+int partially_on_line(struct sensors_ *sensors)
+{
+    return (sensors->L3 || sensors->R3);
+}
+
+void follow_line(struct sensors_ *sensors, int speed)
+{
+    if (!sensors->R1)
+    {
+        SetMotors(1, 0, speed, speed, 0);
+    }
+    else if (!sensors->L1)
+    {
+        SetMotors(0, 1, speed, speed, 0);
+    }
+    else
+    {
+        motor_forward(speed, 0);
+    }
+    reflectance_digital(sensors);
+}
+
+void update_pos(struct navigator *nav)
+{
+    if (!(nav->direction))
+        nav->y++;
+    else
+        nav->x += nav->direction == LEFT ? -1 : 1;
+}
 
 int rand_range(int min, int max)
 {
